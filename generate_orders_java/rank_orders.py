@@ -3,6 +3,7 @@ import json
 from itertools import combinations
 import math
 import csv
+import random
 
 def get_orders(target_path):
     orders = []
@@ -59,7 +60,7 @@ def sort_orders(orders, t):
         #print(f"{next_order} - {min(count_unique_seq(sorted_orders, t) / total_possibilities * 100, 100):.2f}% coverage")
     return sorted_orders
 
-def get_victims_or_brittle(github_slug, module,target_path_polluter_cleaner):
+def get_victims_or_brittle(github_slug, module, target_path_polluter_cleaner):
     output = []
     with open(target_path_polluter_cleaner, 'r') as file:
         reader = csv.DictReader(file)
@@ -67,14 +68,23 @@ def get_victims_or_brittle(github_slug, module,target_path_polluter_cleaner):
             module_name = row['module'].split('/')[-1] if row['module'] != '.' else ''
             if row['github_slug'] == github_slug and module_name == module:
                 if row['type_victim_or_brittle'] == 'victim':
-                    output.append([row['polluter/state-setter'], row['victim/brittle'], row['potential_cleaner'],1])
-                    output.append([row['polluter/state-setter'], row['potential_cleaner'], row['victim/brittle'],2])
+                    if row['potential_cleaner']==row['polluter/state-setter']:
+                        output.append([row['polluter/state-setter'], row['victim/brittle'], 3])
+                        output.append([row['victim/brittle'], row['polluter/state-setter'], 4])
+                    elif row['potential_cleaner']:  # Check if potential_cleaner is set
+                        output.append([row['polluter/state-setter'], row['victim/brittle'], row['potential_cleaner'], 1])
+                        output.append([row['polluter/state-setter'], row['potential_cleaner'], row['victim/brittle'], 2])
+                    else:  # If potential_cleaner is not set
+                        output.append([row['polluter/state-setter'], row['victim/brittle'], 3])
+                        output.append([row['victim/brittle'], row['polluter/state-setter'], 4])
                 elif row['type_victim_or_brittle'] == 'brittle':
-                    output.append([row['polluter/state-setter'], row['victim/brittle'],3])
-                    output.append([row['victim/brittle'], row['polluter/state-setter'],4])
+                    output.append([row['polluter/state-setter'], row['victim/brittle'], 3])
+                    output.append([row['victim/brittle'], row['polluter/state-setter'], 4])
     return output
 
+
 def find_OD_in_sorted_orders(sorted_orders, OD_list):
+    #print("--gg----")
     OD_found = set()
     sorted_order_count = 0
 
@@ -101,10 +111,86 @@ def find_OD_in_sorted_orders(sorted_orders, OD_list):
                 i += 1
 
         if len(OD_list) == 0:
+            #print(f"Number of OD not found in sorted list: {len(OD_list)}")
+            #print(f"Number of OD found in sorted list: {len(OD_found)}")
             return sorted_order_count, OD_found, OD_list
 
     #print(f"Number of OD not found: {len(OD_list)}")
+    #print(f"Number of OD not found in sorted list: {len(OD_list)}")
+    #print(f"Number of OD found in sorted list: {len(OD_found)}")
     return sorted_order_count, OD_found, OD_list
+def count_ODs_in_order(order, OD_list):
+    # Create a flag 2D array
+    flag_2D_array = set()
+    for OD in OD_list:
+        if all(elem in order for elem in OD[:-1]) and all(order.index(OD[j]) <= order.index(OD[j + 1]) for j in range(len(OD) - 2)):
+            last_element = OD[-1]
+            if last_element == 1:
+                flag_2D_array.add((last_element, OD[1]))
+            elif last_element == 2:
+                flag_2D_array.add((last_element, OD[2]))
+            elif last_element == 3:
+                flag_2D_array.add((last_element, OD[1]))
+            elif last_element == 4:
+                flag_2D_array.add((last_element, OD[0]))
+    print(f"unique found: {len(flag_2D_array)}")
+
+    #print("flag_2D_array:", flag_2D_array)
+    return len(flag_2D_array)
+
+def find_OD_in_sorted_orders_greedy(sorted_orders, OD_list):
+    # Sorting the orders based on the number of ODs found in each order
+    sorted_orders = sorted(sorted_orders, key=lambda order: count_ODs_in_order(order, OD_list), reverse=True)
+    return find_OD_in_sorted_orders(sorted_orders,OD_list)
+    """ OD_found = set()
+    sorted_order_count = 0
+
+    # Now simply iterate over the sorted_orders
+    for order in sorted_orders:
+        # Create a flag 2D array
+         """""" flag_2D_array = set()
+        for OD in OD_list:
+            if all(elem in order for elem in OD[:-1]) and all(order.index(OD[j]) <= order.index(OD[j + 1]) for j in range(len(OD) - 2)):
+                last_element = OD[-1]
+                if last_element == 1:
+                    flag_2D_array.add((last_element, OD[1]))
+                elif last_element == 2:
+                    flag_2D_array.add((last_element, OD[2]))
+                elif last_element == 3:
+                    flag_2D_array.add((last_element, OD[1]))
+                elif last_element == 4:
+                    flag_2D_array.add((last_element, OD[0]))  """"""
+
+        sorted_order_count += 1
+
+        i = 0
+        while i < len(OD_list):
+            OD = OD_list[i]
+            if all(elem in order for elem in OD[:-1]) and all(order.index(OD[j]) <= order.index(OD[j + 1]) for j in range(len(OD) - 2)):
+                OD_found.add(tuple(OD))
+
+                # Check the last element in the OD and pop the relevant elements from OD_list
+                last_element = OD[-1]
+                if last_element == 1:
+                    OD_list = [od for od in OD_list if od[1] != OD[1]]
+                elif last_element == 2:
+                    OD_list = [od for od in OD_list if od[2] != OD[2]]
+                elif last_element == 3:
+                    OD_list = [od for od in OD_list if od[1] != OD[1]]
+                elif last_element == 4:
+                    OD_list = [od for od in OD_list if od[0] != OD[0]]
+            else:
+                i += 1
+
+        # If no more ODs to find, exit early
+        if not OD_list:
+            break
+
+    print(f"Number of OD not found in greedy: {len(OD_list)}")
+    print(OD_list)
+    print(f"Number of OD found in greedy: {len(OD_found)}")
+    return sorted_order_count, OD_found, OD_list """
+
 
 
 if __name__ == "__main__":
@@ -112,14 +198,35 @@ if __name__ == "__main__":
     module = input("Enter the module name (or press Enter to match any): ")
     target_path_polluter_cleaner = input("Please enter the target path for polluter cleaner list: ")
     result = get_victims_or_brittle(github_slug, module,target_path_polluter_cleaner)
-    #print(f"Number OD pairs found: {len(result)}")
+    print(f"Number OD pairs found: {len(result)}")
     target_path = input("Please enter the target path for generated orders: ")
     orders = get_orders(target_path)
     t = int(input("Please enter the value of t: "))
     #print("Sorted Orders: ")
-    sorted_orders = sort_orders(orders, t)
 
+
+    num_shuffle_iterations = 1000
+    total_rank_point=0
+    total_rank_point_greedy=0
+    for i in range(num_shuffle_iterations):
+        shuffled_orders = orders.copy()  # Create a copy of the original orders
+        random_seed = i  # Use the iteration index as the random seed
+        random.seed(random_seed)
+        random.shuffle(shuffled_orders)
+        order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(shuffled_orders, result)
+        total_rank_point=total_rank_point+order_count
+
+        #sorted_order_count_greedy, OD_found_greedy, not_found_ODs_greedy= find_OD_in_sorted_orders_greedy(shuffled_orders, result)
+        #print(f"Number of avg orders needed to find all OD from greedy: {sorted_order_count_greedy}")
+        #total_rank_point_greedy=total_rank_point_greedy+sorted_order_count_greedy
+        #print("Shuffle", i + 1, ":", shuffled_orders)
+
+    print(f"Number of avg orders needed to find all OD from random seed: {total_rank_point/num_shuffle_iterations}")
+    #print(f"Number of avg orders needed to find all OD from random seed greedy: {total_rank_point_greedy/num_shuffle_iterations}")
+    sorted_orders = sort_orders(orders, t)
     sorted_order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(sorted_orders, result)
     print(f"Number of sorted orders needed to find all OD: {sorted_order_count}")
     #print("OD found: ", OD_found)
     #print("OD not found: ", not_found_ODs)
+    sorted_order_count_greedy, OD_found_greedy, not_found_ODs_greedy= find_OD_in_sorted_orders_greedy(sorted_orders, result)
+    print(f"Number of orders needed to find all OD in greedy: {sorted_order_count_greedy}")
