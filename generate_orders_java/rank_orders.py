@@ -84,7 +84,6 @@ def get_victims_or_brittle(github_slug, module, target_path_polluter_cleaner):
 
 
 def find_OD_in_sorted_orders(sorted_orders, OD_list):
-    #print("--gg----")
     OD_found = set()
     sorted_order_count = 0
 
@@ -223,10 +222,10 @@ if __name__ == "__main__":
 
     print(f"Number of avg orders needed to find all OD from random seed: {total_rank_point/num_shuffle_iterations}")
     #print(f"Number of avg orders needed to find all OD from random seed greedy: {total_rank_point_greedy/num_shuffle_iterations}")
-    sorted_orders = sort_orders(orders, t)
-    sorted_order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(sorted_orders, result)
-    print(f"Number of sorted orders needed to find all OD: {sorted_order_count}")
+    #sorted_orders = sort_orders(orders, t)
+    #sorted_order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(sorted_orders, result)
+    #print(f"Number of sorted orders needed to find all OD: {sorted_order_count}")
     #print("OD found: ", OD_found)
     #print("OD not found: ", not_found_ODs)
-    sorted_order_count_greedy, OD_found_greedy, not_found_ODs_greedy= find_OD_in_sorted_orders_greedy(sorted_orders, result)
+    sorted_order_count_greedy, OD_found_greedy, not_found_ODs_greedy= find_OD_in_sorted_orders_greedy(orders, result)
     print(f"Number of orders needed to find all OD in greedy: {sorted_order_count_greedy}")
