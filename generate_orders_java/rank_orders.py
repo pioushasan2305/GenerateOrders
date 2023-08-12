@@ -61,63 +61,109 @@ def sort_orders(orders, t):
     return sorted_orders
 
 def get_victims_or_brittle(github_slug, module, target_path_polluter_cleaner):
-    output = []
+    output = {}
+    unique_victims_brittle = set()
+
     with open(target_path_polluter_cleaner, 'r') as file:
         reader = csv.DictReader(file)
+        index = 0
         for row in reader:
             module_name = row['module'].split('/')[-1] if row['module'] != '.' else ''
             if row['github_slug'] == github_slug and module_name == module:
                 if row['type_victim_or_brittle'] == 'victim':
-                    if row['potential_cleaner']==row['polluter/state-setter']:
-                        output.append([row['polluter/state-setter'], row['victim/brittle'], 3])
-                        output.append([row['victim/brittle'], row['polluter/state-setter'], 4])
-                    elif row['potential_cleaner']:  # Check if potential_cleaner is set
-                        output.append([row['polluter/state-setter'], row['victim/brittle'], row['potential_cleaner'], 1])
-                        output.append([row['polluter/state-setter'], row['potential_cleaner'], row['victim/brittle'], 2])
-                    else:  # If potential_cleaner is not set
-                        output.append([row['polluter/state-setter'], row['victim/brittle'], 3])
-                        output.append([row['victim/brittle'], row['polluter/state-setter'], 4])
+                    if row['potential_cleaner'] == row['polluter/state-setter']:
+                        output[index] = [row['polluter/state-setter'], row['victim/brittle'], 3]
+                        unique_victims_brittle.add(row['victim/brittle'])
+                        index += 1
+
+                        output[index] = [row['victim/brittle'], row['polluter/state-setter'], 4]
+                        unique_victims_brittle.add(row['victim/brittle'])
+                        index += 1
+                    elif row['potential_cleaner']:
+                        output[index] = [row['polluter/state-setter'], row['victim/brittle'], row['potential_cleaner'], 1]
+                        unique_victims_brittle.add(row['victim/brittle'])
+                        index += 1
+
+                        output[index] = [row['polluter/state-setter'], row['potential_cleaner'], row['victim/brittle'], 2]
+                        unique_victims_brittle.add(row['victim/brittle'])
+                        index += 1
+                    else:
+                        output[index] = [row['polluter/state-setter'], row['victim/brittle'], 3]
+                        unique_victims_brittle.add(row['victim/brittle'])
+                        index += 1
+
+                        output[index] = [row['victim/brittle'], row['polluter/state-setter'], 4]
+                        unique_victims_brittle.add(row['victim/brittle'])
+                        index += 1
                 elif row['type_victim_or_brittle'] == 'brittle':
-                    output.append([row['polluter/state-setter'], row['victim/brittle'], 3])
-                    output.append([row['victim/brittle'], row['polluter/state-setter'], 4])
-    return output
+                    output[index] = [row['polluter/state-setter'], row['victim/brittle'], 3]
+                    unique_victims_brittle.add(row['victim/brittle'])
+                    index += 1
+
+                    output[index] = [row['victim/brittle'], row['polluter/state-setter'], 4]
+                    unique_victims_brittle.add(row['victim/brittle'])
+                    index += 1
+
+    unique_victims_brittle_list = list(unique_victims_brittle)
+    return output, unique_victims_brittle_list
 
 
-def find_OD_in_sorted_orders(sorted_orders, OD_list):
+
+def find_OD_in_sorted_orders(sorted_orders, OD_dict, unique_od_test_list):
     OD_found = set()
     sorted_order_count = 0
 
     for order in sorted_orders:
         sorted_order_count += 1
+        keys_to_remove = []
 
-        i = 0
-        while i < len(OD_list):
-            OD = OD_list[i]
-            if all(elem in order for elem in OD[:-1]) and all(order.index(OD[j]) <= order.index(OD[j + 1]) for j in range(len(OD) - 2)):
+        for key, OD in OD_dict.items():
+            if OD and isinstance(OD, list) and all(elem in order for elem in OD[:-1]) and all(order.index(OD[j]) <= order.index(OD[j + 1]) for j in range(len(OD) - 2)):
                 OD_found.add(tuple(OD))
-
-                # Check the last element in the OD and pop the relevant elements from OD_list
                 last_element = OD[-1]
-                if last_element == 1:
-                    OD_list = [od for od in OD_list if od[1] != OD[1]]
-                elif last_element == 2:
-                    OD_list = [od for od in OD_list if od[2] != OD[2]]
-                elif last_element == 3:
-                    OD_list = [od for od in OD_list if od[1] != OD[1]]
-                elif last_element == 4:
-                    OD_list = [od for od in OD_list if od[0] != OD[0]]
-            else:
-                i += 1
 
-        if len(OD_list) == 0:
-            #print(f"Number of OD not found in sorted list: {len(OD_list)}")
-            #print(f"Number of OD found in sorted list: {len(OD_found)}")
-            return sorted_order_count, OD_found, OD_list
+                if last_element == 1 and OD[1] in unique_od_test_list:
+                    if key+1 in OD_dict and isinstance(OD_dict[key+1], list) and OD_dict[key+1]:
+                        OD_dict[key] = []
+                    else:
+                        print(OD[1])
+                        unique_od_test_list.remove(OD[1])
+                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[1] == OD[1]])
+                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[2] == OD[1]])
 
-    #print(f"Number of OD not found: {len(OD_list)}")
-    #print(f"Number of OD not found in sorted list: {len(OD_list)}")
-    #print(f"Number of OD found in sorted list: {len(OD_found)}")
-    return sorted_order_count, OD_found, OD_list
+                elif last_element == 2 and OD[2] in unique_od_test_list:
+                    if key-1 in OD_dict and isinstance(OD_dict[key-1], list) and OD_dict[key-1]:
+                        OD_dict[key] = []
+                    else:
+                        unique_od_test_list.remove(OD[2])
+                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[1] == OD[2]])
+                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[2] == OD[2]])
+
+                elif last_element == 3 and OD[1] in unique_od_test_list:
+                    if key+1 in OD_dict and isinstance(OD_dict[key+1], list) and OD_dict[key+1]:
+                        OD_dict[key] = []
+                    else:
+                        unique_od_test_list.remove(OD[1])
+                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[1] == OD[1]])
+                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[0] == OD[1]])
+
+                elif last_element == 4 and OD[0] in unique_od_test_list:
+                    if key-1 in OD_dict and isinstance(OD_dict[key-1], list) and OD_dict[key-1]:
+                        OD_dict[key] = []
+                    else:
+                        unique_od_test_list.remove(OD[0])
+                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[1] == OD[0]])
+                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[0] == OD[0]])
+
+        for key in keys_to_remove:
+            OD_dict.pop(key, None)
+
+        if len(unique_od_test_list) == 0:
+            return sorted_order_count, OD_found, OD_dict
+
+    return sorted_order_count, OD_found, OD_dict
+
+
 def count_ODs_in_order(order, OD_list):
     # Create a flag 2D array
     flag_2D_array = set()
@@ -196,23 +242,29 @@ if __name__ == "__main__":
     github_slug = input("Enter the github slug: ")
     module = input("Enter the module name (or press Enter to match any): ")
     target_path_polluter_cleaner = input("Please enter the target path for polluter cleaner list: ")
-    result = get_victims_or_brittle(github_slug, module,target_path_polluter_cleaner)
-    print(f"Number OD pairs found: {len(result)}")
+    result,unique_od_test_list = get_victims_or_brittle(github_slug, module,target_path_polluter_cleaner)
+    print(f"Number pairs found: {len(result)}")
+    print(f"Number of OD tests found: {len(unique_od_test_list)}")
     target_path = input("Please enter the target path for generated orders: ")
     orders = get_orders(target_path)
     t = int(input("Please enter the value of t: "))
+    order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(orders, result,unique_od_test_list)
+    print(f"Number of needed order: {order_count}")
     #print("Sorted Orders: ")
 
 
-    num_shuffle_iterations = 1000
+    """ num_shuffle_iterations = 1000
     total_rank_point=0
     total_rank_point_greedy=0
     for i in range(num_shuffle_iterations):
         shuffled_orders = orders.copy()  # Create a copy of the original orders
+        copy_of_results = result.copy()
+        copy_of_unique_od_test_list = unique_od_test_list.copy()
         random_seed = i  # Use the iteration index as the random seed
         random.seed(random_seed)
         random.shuffle(shuffled_orders)
-        order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(shuffled_orders, result)
+        order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(shuffled_orders, copy_of_results,unique_od_test_list)
+        print(order_count)
         total_rank_point=total_rank_point+order_count
 
         #sorted_order_count_greedy, OD_found_greedy, not_found_ODs_greedy= find_OD_in_sorted_orders_greedy(shuffled_orders, result)
@@ -222,10 +274,10 @@ if __name__ == "__main__":
 
     print(f"Number of avg orders needed to find all OD from random seed: {total_rank_point/num_shuffle_iterations}")
     #print(f"Number of avg orders needed to find all OD from random seed greedy: {total_rank_point_greedy/num_shuffle_iterations}")
-    #sorted_orders = sort_orders(orders, t)
-    #sorted_order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(sorted_orders, result)
-    #print(f"Number of sorted orders needed to find all OD: {sorted_order_count}")
+    sorted_orders = sort_orders(orders, t)
+    sorted_order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(sorted_orders, result,unique_od_test_list)
+    print(f"Number of sorted orders needed to find all OD: {sorted_order_count}") """
     #print("OD found: ", OD_found)
     #print("OD not found: ", not_found_ODs)
-    sorted_order_count_greedy, OD_found_greedy, not_found_ODs_greedy= find_OD_in_sorted_orders_greedy(orders, result)
-    print(f"Number of orders needed to find all OD in greedy: {sorted_order_count_greedy}")
+    #sorted_order_count_greedy, OD_found_greedy, not_found_ODs_greedy= find_OD_in_sorted_orders_greedy(orders, result)
+    #print(f"Number of orders needed to find all OD in greedy: {sorted_order_count_greedy}")
