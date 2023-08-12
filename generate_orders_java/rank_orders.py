@@ -47,18 +47,37 @@ def max_cover_order(orders, selected_orders, t):
     return max_order
 
 
+
 def sort_orders(orders, t):
+    total_possibilities = math.factorial(len(orders[0])) / math.factorial(len(orders[0]) - t) # total possibilities
+
+    sorted_orders = []
+    while orders:
+        current_batch = [orders[0]]  # start with the first order
+        orders.remove(orders[0])
+        coverage = min(count_unique_seq(current_batch, t) / total_possibilities * 100, 100)
+        while coverage < 100 and orders:
+            next_order = max_cover_order(orders, current_batch, t)
+            current_batch.append(next_order)
+            orders.remove(next_order)
+            coverage = min(count_unique_seq(current_batch, t) / total_possibilities * 100, 100)
+        print(f"Batch with {len(current_batch)} orders reached {coverage:.2f}% coverage")
+        sorted_orders.extend(current_batch)
+
+    return sorted_orders
+
+""" def sort_orders(orders, t):
     total_possibilities = math.factorial(len(orders[0])) / math.factorial(len(orders[0]) - t) # total possibilities
     #print(f"Total possibilities with permutations: {total_possibilities}")
     sorted_orders = [orders[0]]  # start with the first order
     orders.remove(orders[0])
-    #print(f"{sorted_orders[0]} - {count_unique_seq(sorted_orders, t) / total_possibilities * 100:.2f}% coverage")
+    print(f"{sorted_orders[0]} - {count_unique_seq(sorted_orders, t) / total_possibilities * 100:.2f}% coverage")
     while orders:
         next_order = max_cover_order(orders, sorted_orders, t)
         sorted_orders.append(next_order)
         orders.remove(next_order)
-        #print(f"{next_order} - {min(count_unique_seq(sorted_orders, t) / total_possibilities * 100, 100):.2f}% coverage")
-    return sorted_orders
+        print(f"{next_order} - {min(count_unique_seq(sorted_orders, t) / total_possibilities * 100, 100):.2f}% coverage")
+    return sorted_orders """
 
 def get_victims_or_brittle(github_slug, module, target_path_polluter_cleaner):
     output = {}
