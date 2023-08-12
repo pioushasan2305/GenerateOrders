@@ -118,56 +118,53 @@ def find_OD_in_sorted_orders(sorted_orders, OD_dict, unique_od_test_list):
         keys_to_remove = []
 
         for key, OD in OD_dict.items():
-            if OD and isinstance(OD, list) and all(elem in order for elem in OD[:-1]) and all(order.index(OD[j]) <= order.index(OD[j + 1]) for j in range(len(OD) - 2)):
+            if all(elem in order for elem in OD[:-1]) and all(order.index(OD[j]) <= order.index(OD[j + 1]) for j in range(len(OD) - 2)):
                 OD_found.add(tuple(OD))
                 last_element = OD[-1]
-
                 if last_element == 1 and OD[1] in unique_od_test_list:
-                    if key+1 in OD_dict and isinstance(OD_dict[key+1], list) and OD_dict[key+1]:
-                        OD_dict[key] = []
+                    if key+1 in OD_dict:
+                        keys_to_remove.append(key)
                     else:
-                        print(OD[1])
                         unique_od_test_list.remove(OD[1])
-                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[1] == OD[1]])
-                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[2] == OD[1]])
-
+                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[1] == OD[1] or od[2] == OD[1]])
                 elif last_element == 2 and OD[2] in unique_od_test_list:
-                    if key-1 in OD_dict and isinstance(OD_dict[key-1], list) and OD_dict[key-1]:
-                        OD_dict[key] = []
+                    if key-1 in OD_dict:
+                        keys_to_remove.append(key)
                     else:
                         unique_od_test_list.remove(OD[2])
-                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[1] == OD[2]])
-                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[2] == OD[2]])
+                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[1] == OD[2] or od[2] == OD[2]])
+
 
                 elif last_element == 3 and OD[1] in unique_od_test_list:
-                    if key+1 in OD_dict and isinstance(OD_dict[key+1], list) and OD_dict[key+1]:
-                        OD_dict[key] = []
+                    if key+1 in OD_dict:
+                        keys_to_remove.append(key)
                     else:
                         unique_od_test_list.remove(OD[1])
-                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[1] == OD[1]])
-                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[0] == OD[1]])
+                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[1] == OD[1] or od[0] == OD[1]])
 
                 elif last_element == 4 and OD[0] in unique_od_test_list:
-                    if key-1 in OD_dict and isinstance(OD_dict[key-1], list) and OD_dict[key-1]:
-                        OD_dict[key] = []
+                    if key-1 in OD_dict:
+                        keys_to_remove.append(key)
                     else:
                         unique_od_test_list.remove(OD[0])
-                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[1] == OD[0]])
-                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[0] == OD[0]])
+                        #keys_to_remove.extend([k for k, od in OD_dict.items() if od[1] == OD[0] or od[0] == OD[0]])
 
         for key in keys_to_remove:
             OD_dict.pop(key, None)
 
         if len(unique_od_test_list) == 0:
             return sorted_order_count, OD_found, OD_dict
-
+    if len(unique_od_test_list) != 0:
+        print(unique_od_test_list)
     return sorted_order_count, OD_found, OD_dict
 
 
-def count_ODs_in_order(order, OD_list):
+def count_ODs_in_order(order, OD_dict):
     # Create a flag 2D array
     flag_2D_array = set()
-    for OD in OD_list:
+
+    for OD in OD_dict.values():
+        # Check if all elements of OD (except the last one) are in order and in the same sequence
         if all(elem in order for elem in OD[:-1]) and all(order.index(OD[j]) <= order.index(OD[j + 1]) for j in range(len(OD) - 2)):
             last_element = OD[-1]
             if last_element == 1:
@@ -178,63 +175,18 @@ def count_ODs_in_order(order, OD_list):
                 flag_2D_array.add((last_element, OD[1]))
             elif last_element == 4:
                 flag_2D_array.add((last_element, OD[0]))
-    print(f"unique found: {len(flag_2D_array)}")
 
-    #print("flag_2D_array:", flag_2D_array)
+    print(f"unique found: {len(flag_2D_array)}")
     return len(flag_2D_array)
 
-def find_OD_in_sorted_orders_greedy(sorted_orders, OD_list):
+def find_OD_in_sorted_orders_greedy(sorted_orders, OD_dict, unique_od_test_list):
+    #print(sorted_orders)
+    #print(OD_dict)
+    print(unique_od_test_list)
     # Sorting the orders based on the number of ODs found in each order
-    sorted_orders = sorted(sorted_orders, key=lambda order: count_ODs_in_order(order, OD_list), reverse=True)
-    return find_OD_in_sorted_orders(sorted_orders,OD_list)
-    """ OD_found = set()
-    sorted_order_count = 0
-
-    # Now simply iterate over the sorted_orders
-    for order in sorted_orders:
-        # Create a flag 2D array
-         """""" flag_2D_array = set()
-        for OD in OD_list:
-            if all(elem in order for elem in OD[:-1]) and all(order.index(OD[j]) <= order.index(OD[j + 1]) for j in range(len(OD) - 2)):
-                last_element = OD[-1]
-                if last_element == 1:
-                    flag_2D_array.add((last_element, OD[1]))
-                elif last_element == 2:
-                    flag_2D_array.add((last_element, OD[2]))
-                elif last_element == 3:
-                    flag_2D_array.add((last_element, OD[1]))
-                elif last_element == 4:
-                    flag_2D_array.add((last_element, OD[0]))  """"""
-
-        sorted_order_count += 1
-
-        i = 0
-        while i < len(OD_list):
-            OD = OD_list[i]
-            if all(elem in order for elem in OD[:-1]) and all(order.index(OD[j]) <= order.index(OD[j + 1]) for j in range(len(OD) - 2)):
-                OD_found.add(tuple(OD))
-
-                # Check the last element in the OD and pop the relevant elements from OD_list
-                last_element = OD[-1]
-                if last_element == 1:
-                    OD_list = [od for od in OD_list if od[1] != OD[1]]
-                elif last_element == 2:
-                    OD_list = [od for od in OD_list if od[2] != OD[2]]
-                elif last_element == 3:
-                    OD_list = [od for od in OD_list if od[1] != OD[1]]
-                elif last_element == 4:
-                    OD_list = [od for od in OD_list if od[0] != OD[0]]
-            else:
-                i += 1
-
-        # If no more ODs to find, exit early
-        if not OD_list:
-            break
-
-    print(f"Number of OD not found in greedy: {len(OD_list)}")
-    print(OD_list)
-    print(f"Number of OD found in greedy: {len(OD_found)}")
-    return sorted_order_count, OD_found, OD_list """
+    sorted_orders = sorted(sorted_orders, key=lambda order: count_ODs_in_order(order, OD_dict), reverse=True)
+    #print(sorted_orders)
+    return find_OD_in_sorted_orders(sorted_orders,OD_dict,unique_od_test_list)
 
 
 
@@ -248,12 +200,12 @@ if __name__ == "__main__":
     target_path = input("Please enter the target path for generated orders: ")
     orders = get_orders(target_path)
     t = int(input("Please enter the value of t: "))
-    order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(orders, result,unique_od_test_list)
-    print(f"Number of needed order: {order_count}")
+    #order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(orders, result,unique_od_test_list)
+    #print(f"Number of needed order: {order_count}")
     #print("Sorted Orders: ")
 
 
-    """ num_shuffle_iterations = 1000
+    num_shuffle_iterations = 1000
     total_rank_point=0
     total_rank_point_greedy=0
     for i in range(num_shuffle_iterations):
@@ -263,7 +215,7 @@ if __name__ == "__main__":
         random_seed = i  # Use the iteration index as the random seed
         random.seed(random_seed)
         random.shuffle(shuffled_orders)
-        order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(shuffled_orders, copy_of_results,unique_od_test_list)
+        order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(shuffled_orders, copy_of_results, copy_of_unique_od_test_list)
         print(order_count)
         total_rank_point=total_rank_point+order_count
 
@@ -275,9 +227,14 @@ if __name__ == "__main__":
     print(f"Number of avg orders needed to find all OD from random seed: {total_rank_point/num_shuffle_iterations}")
     #print(f"Number of avg orders needed to find all OD from random seed greedy: {total_rank_point_greedy/num_shuffle_iterations}")
     sorted_orders = sort_orders(orders, t)
-    sorted_order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(sorted_orders, result,unique_od_test_list)
-    print(f"Number of sorted orders needed to find all OD: {sorted_order_count}") """
+    copy_of_results_sorted = result.copy()
+    copy_of_unique_od_test_list_sorted = unique_od_test_list.copy()
+    sorted_order_count, OD_found, not_found_ODs = find_OD_in_sorted_orders(sorted_orders, copy_of_results_sorted ,copy_of_unique_od_test_list_sorted)
+    print(f"Number of sorted orders needed to find all OD: {sorted_order_count}")
     #print("OD found: ", OD_found)
     #print("OD not found: ", not_found_ODs)
-    #sorted_order_count_greedy, OD_found_greedy, not_found_ODs_greedy= find_OD_in_sorted_orders_greedy(orders, result)
+    orders_greedy = orders.copy()  # Create a copy of the original orders
+    results_greedy = result.copy()
+    unique_od_test_list_greedy=unique_od_test_list.copy()
+    #sorted_order_count_greedy, OD_found_greedy, not_found_ODs_greedy= find_OD_in_sorted_orders_greedy(orders_greedy , results_greedy ,unique_od_test_list_greedy)
     #print(f"Number of orders needed to find all OD in greedy: {sorted_order_count_greedy}")
